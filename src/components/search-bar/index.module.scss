@@ -1,0 +1,51 @@
+.wrapper {
+  width: fit-content;
+
+  .input {
+    width: 200px;
+    height: 30px;
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 16px;
+  }
+
+  .variants {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 10px;
+    row-gap: 10px;
+    position: absolute;
+    border: 1px solid gray;
+    border-radius: 4px;
+    width: 200px;
+
+    .title {
+      font-size: 20px;
+    }
+
+    ul {
+      font-size: 16px;
+      padding-left: 20px;
+
+      .points {
+        cursor: pointer;
+      }
+    }
+  }
+}
+
+@media (max-width: 992px) {
+  .wrapper {
+    position: sticky;
+    top: 0;
+
+    .input {
+      width: 150px;
+    }
+
+    .variants {
+      width: 150px;
+    }
+  }
+}
