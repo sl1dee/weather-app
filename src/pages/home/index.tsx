@@ -14,27 +14,16 @@ const Home = () => {
     const [triggerCitySearchQuery, { data: searchResults }] = useLazySearchCityQuery();
 
     useEffect(() => {
-        const savedWeatherList = JSON.parse(localStorage.getItem("weatherList") || "[]");
-        setWeatherList(savedWeatherList);
-    }, []);
-
-    useEffect(() => {
-        localStorage.setItem("weatherList", JSON.stringify(weatherList));
-    }, [weatherList]);
-
-    console.log(localStorage)
-
-    // загружаем 6 городов по умолчанию
-    useEffect(() => {
-        const fetchWeatherData = async () => {
-            const savedWeatherList = JSON.parse(localStorage.getItem("weatherList") || "[]");
-
+        const fetchWeatherData = () => {
             const allCities = Object.keys(localStorage)
                 .filter(key => key.startsWith("weather-"))
                 .map(key => JSON.parse(localStorage.getItem(key)!));
 
+            const savedWeatherList = JSON.parse(localStorage.getItem("weatherList") || "[]");
+
             const updatedWeatherList = [...savedWeatherList, ...allCities];
 
+            // проверяем дубликаты по имени города
             const uniqueWeatherList = updatedWeatherList.filter((value, index, self) =>
                     index === self.findIndex((t) => (
                         t.location.name.toLowerCase() === value.location.name.toLowerCase()
@@ -46,6 +35,10 @@ const Home = () => {
 
         fetchWeatherData();
     }, []);
+
+    useEffect(() => {
+        localStorage.setItem("weatherList", JSON.stringify(weatherList));
+    }, [weatherList]);
 
     // запрос при вводе названия > 2 символов
     useEffect(() => {
@@ -68,10 +61,8 @@ const Home = () => {
         try {
             const result = await triggerWeatherQuery(city).unwrap();
 
-            // Сохраняем этот город по ключу `weather-${city}`
             localStorage.setItem(`weather-${city}`, JSON.stringify(result));
 
-            // Обновляем weatherList и сохраняем его в localStorage
             const updatedList = [result, ...weatherList];
             setWeatherList(updatedList);
             localStorage.setItem("weatherList", JSON.stringify(updatedList));
@@ -92,6 +83,7 @@ const Home = () => {
 
         localStorage.setItem("weatherList", JSON.stringify(updatedList));
     };
+
 
     return (
         <div className={cl.wrapper}>
