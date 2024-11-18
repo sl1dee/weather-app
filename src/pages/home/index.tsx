@@ -3,7 +3,6 @@ import useDebounce from "../../hooks/useDebounce";
 import {useLazyGetWeatherQuery, useLazySearchCityQuery} from "../../features/weather/weatherAPI";
 import SearchBar from "../../components/search-bar";
 import WeatherCard from "../../components/weather-card";
-// @ts-ignore
 import cl from './index.module.scss'
 
 const Home = () => {
@@ -27,20 +26,26 @@ const Home = () => {
 
     // загружаем 6 городов по умолчанию
     useEffect(() => {
-        const fetchRandomCities = async () => {
-            const cities = ["New York", "London", "Paris", "Tokyo", "Berlin", "Sydney"];
-            try {
-                const weatherData = await Promise.all(
-                    cities.map((city) => triggerWeatherQuery(city).unwrap())
-                );
-                setWeatherList(weatherData);
-            } catch (error) {
-                console.error("Ошибка при получении данных о погоде:", error);
-            }
+        const fetchWeatherData = async () => {
+            const savedWeatherList = JSON.parse(localStorage.getItem("weatherList") || "[]");
+
+            const allCities = Object.keys(localStorage)
+                .filter(key => key.startsWith("weather-"))
+                .map(key => JSON.parse(localStorage.getItem(key)!));
+
+            const updatedWeatherList = [...savedWeatherList, ...allCities];
+
+            const uniqueWeatherList = updatedWeatherList.filter((value, index, self) =>
+                    index === self.findIndex((t) => (
+                        t.location.name.toLowerCase() === value.location.name.toLowerCase()
+                    ))
+            );
+
+            setWeatherList(uniqueWeatherList);
         };
 
-        fetchRandomCities();
-    }, [triggerWeatherQuery]);
+        fetchWeatherData();
+    }, []);
 
     // запрос при вводе названия > 2 символов
     useEffect(() => {
@@ -51,7 +56,7 @@ const Home = () => {
 
     // при повторном поиске города (обращаемся в кэш)
     const handleCitySelect = async (city: string) => {
-        // Проверяем, есть ли город уже в weatherList
+        // проверяем наличие города в weatherList
         const cityAlreadyAdded = weatherList.some(
             (weather) => weather.location.name.toLowerCase() === city.toLowerCase()
         );
@@ -59,18 +64,17 @@ const Home = () => {
             return;
         }
 
-        // Проверяем, есть ли город в локальном кеше
-        const cachedWeather = JSON.parse(localStorage.getItem(`weather-${city}`) || "null");
-        if (cachedWeather) {
-            setWeatherList((prev) => [cachedWeather, ...prev]);
-            return;
-        }
-
-        // выполняем запрос к апи если города нет ни в кэше, ни в weatherList
+        // выполняем запрос к апи если в weatherList нет города
         try {
             const result = await triggerWeatherQuery(city).unwrap();
+
+            // Сохраняем этот город по ключу `weather-${city}`
             localStorage.setItem(`weather-${city}`, JSON.stringify(result));
-            setWeatherList((prev) => [result, ...prev]);
+
+            // Обновляем weatherList и сохраняем его в localStorage
+            const updatedList = [result, ...weatherList];
+            setWeatherList(updatedList);
+            localStorage.setItem("weatherList", JSON.stringify(updatedList));
         } catch (error) {
             console.error("Ошибка при добавлении города:", error);
         }
@@ -80,9 +84,13 @@ const Home = () => {
         localStorage.setItem("selectedCityWeather", JSON.stringify(weather));
     };
 
-
     const handleRemoveCity = (city: string) => {
-        setWeatherList((prev) => prev.filter((item) => item.location.name !== city));
+        localStorage.removeItem(`weather-${city}`);
+
+        const updatedList = weatherList.filter((item) => item.location.name !== city);
+        setWeatherList(updatedList);
+
+        localStorage.setItem("weatherList", JSON.stringify(updatedList));
     };
 
     return (
@@ -95,7 +103,7 @@ const Home = () => {
                     onSearch={(query) => setQuery(query)}
                 />
             </div>
-            {weatherList.length > 0 && (
+            {weatherList.length > 0 ? (
                 <div className={cl.cities}>
                     <h2 className={cl.title}>Cities</h2>
                     <div className={cl.cards}>
@@ -112,6 +120,8 @@ const Home = () => {
                         ))}
                     </div>
                 </div>
+            ) : (
+                <h2>Add cities</h2>
             )}
         </div>
     );
